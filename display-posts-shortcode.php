@@ -515,7 +515,7 @@ function be_display_posts_shortcode( $atts ) {
 		$class = array( 'listing-item' );
 
 		if($atts['child_classes'] != '') {
-			$class = array_merge($class, explode($atts['child_classes']));
+			$class = array_merge($class, array_map('sanitize_html_class', (explode( ' ', $atts['child_class']))));
 		}
 
 
