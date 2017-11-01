@@ -28,6 +28,53 @@
  * @link https://github.com/billerickson/display-posts-shortcode/wiki#customization-with-filters
  */
 
+
+
+ function dps_get_pagination($id) {
+   if(isset($_GET['dps_'.$id])) {
+     return intval($_GET['dps_'.$id]);
+   } else {
+     return 1;
+   }
+ }
+
+ function dps_format_wp_pagenavi($string, $id) {
+   $formatted = preg_replace('/dps_'.$id.'=[1-9]*/', '', $string);
+   $formatted = preg_replace('/\/page\/([1-9]*)\/\??/', '?dps_'.$id.'=$1&', $formatted);
+   return $formatted;
+ }
+
+ function dps_create_pagination_link($params, $label, $classes=array('pagination-link')) {
+   $url = strtok($_SERVER["REQUEST_URI"], '?');
+   $url .= '?'.http_build_query($params);
+   return '<a href="'.$url.'" class="'.implode(' ', $classes).'" alt="Change pagination">'.$label.'</a>';
+ }
+
+ function dps_get_previous_posts_link($id, $label) {
+   $get_params = $_GET;
+   if(isset($get_params['dps_'.$id]) && intval($get_params['dps_'.$id]) > 1) {
+     $get_params['dps_'.$id] = intval($get_params['dps_'.$id]) - 1;
+     return dps_create_pagination_link($get_params, $label, 'pagination-link pagination-prev');
+   } else {
+     return '';
+   }
+ }
+ function dps_get_next_posts_link($id, $label, $max_num_pages) {
+   $get_params = $_GET;
+   if(!isset($get_params['dps_'.$id])) {
+     $get_params['dps_'.$id] = 2;
+     return dps_create_pagination_link($get_params, $label, 'pagination-link pagination-next');
+   }
+   elseif (intval($get_params['dps_'.$id]) < $max_num_pages) {
+     $get_params['dps_'.$id] = intval($get_params['dps_'.$id]) + 1;
+     return dps_create_pagination_link($get_params, $label, 'pagination-link pagination-next');
+   } else {
+     return '';
+   }
+ }
+
+
+
 // Create the shortcode
 add_shortcode( 'display-posts', 'be_display_posts_shortcode' );
 function be_display_posts_shortcode( $atts ) {
@@ -87,9 +134,9 @@ function be_display_posts_shortcode( $atts ) {
 		'wrapper'              => 'ul',
 		'wrapper_class'        => 'display-posts-listing',
 		'wrapper_id'           => false,
-		'pagination'					 => false,
+		'pagination'					 => -1,
 		'force_read_more'      => false,
-		'child_class'	       => '',
+		'child_class'	         => '',
 	), $atts, 'display-posts' );
 
 	// End early if shortcode should be turned off
@@ -144,7 +191,7 @@ function be_display_posts_shortcode( $atts ) {
 	$shortcode_title      = sanitize_text_field( $atts['title'] );
 	$wrapper              = sanitize_text_field( $atts['wrapper'] );
 	$wrapper_class        = array_map( 'sanitize_html_class', ( explode( ' ', $atts['wrapper_class'] ) ) );
-	$pagination 					= filter_var( $atts['pagination'], FILTER_VALIDATE_BOOLEAN );
+	$pagination 					= intval( $atts['pagination']);
 	$force_read_more   	  = filter_var( $atts['force_read_more'], FILTER_VALIDATE_BOOLEAN );
 
 	if( !empty( $wrapper_class ) )
@@ -385,9 +432,10 @@ function be_display_posts_shortcode( $atts ) {
 		$wrapper = 'ul';
 	$inner_wrapper = 'div' == $wrapper ? 'div' : 'li';
 
-	if($pagination) {
-		$args['paged'] = ( get_query_var('paged') ) ? get_query_var('paged') : 1;
-	}
+	if($pagination > 0) {
+    $args['paged'] = dps_get_pagination($pagination);
+  }
+
 
 	/**
 	 * Filter the arguments passed to WP_Query.
@@ -555,20 +603,20 @@ function be_display_posts_shortcode( $atts ) {
 
 
 	$poss_pagination_code = '';
-	if($pagination) {
+	if($pagination > 0) {
 		if($listing->max_num_pages > 1) {
 			if(function_exists('wp_pagenavi')) {
-				$poss_pagination_code = wp_pagenavi(array( 'query' => $listing , 'echo' => false));
+				$poss_pagination_code = dps_format_wp_pagenavi(wp_pagenavi(array( 'query' => $listing , 'echo' => false)), $pagination);
 			}
 			else {
 				$poss_pagination_code = '
 				<div class="pagination"><div class="wp-pagenavi">
 					<span class="pages">Seite '.$args['paged'].' von '.$listing->max_num_pages.'</span>
-					'.get_previous_posts_link(__('&larr; Vorherige', 'purepress'), $listing->max_num_pages).'
-					'.get_next_posts_link(__('Nächste &rarr;', 'purepress'), $listing->max_num_pages).'
+					'.dps_get_previous_posts_link($pagination, __('&larr; Vorherige', 'purepress')).'
+					'.dps_get_next_posts_link($pagination, __('Nächste &rarr;', 'purepress'), $listing->max_num_pages).'
 					</div></div>';
-				}
-		 }
+			}
+		}
 	}
 
 
