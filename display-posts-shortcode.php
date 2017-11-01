@@ -87,6 +87,9 @@ function be_display_posts_shortcode( $atts ) {
 		'wrapper'              => 'ul',
 		'wrapper_class'        => 'display-posts-listing',
 		'wrapper_id'           => false,
+		'pagination'					 => false,
+		'force_read_more'      => false,
+		'child_classes'	       => '',
 	), $atts, 'display-posts' );
 
 	// End early if shortcode should be turned off
@@ -141,6 +144,8 @@ function be_display_posts_shortcode( $atts ) {
 	$shortcode_title      = sanitize_text_field( $atts['title'] );
 	$wrapper              = sanitize_text_field( $atts['wrapper'] );
 	$wrapper_class        = array_map( 'sanitize_html_class', ( explode( ' ', $atts['wrapper_class'] ) ) );
+	$pagination 					= filter_var( $atts['pagination'], FILTER_VALIDATE_BOOLEAN );
+	$force_read_more   	  = filter_var( $atts['force_read_more'], FILTER_VALIDATE_BOOLEAN );
 
 	if( !empty( $wrapper_class ) )
 		$wrapper_class = ' class="' . implode( ' ', $wrapper_class ) . '"';
@@ -380,6 +385,10 @@ function be_display_posts_shortcode( $atts ) {
 		$wrapper = 'ul';
 	$inner_wrapper = 'div' == $wrapper ? 'div' : 'li';
 
+	if($pagination) {
+		$args['paged'] = ( get_query_var('paged') ) ? get_query_var('paged') : 1;
+	}
+
 	/**
 	 * Filter the arguments passed to WP_Query.
 	 *
@@ -452,9 +461,17 @@ function be_display_posts_shortcode( $atts ) {
 				if( has_excerpt() && apply_filters( 'display_posts_shortcode_full_manual_excerpt', false ) ) {
 					$excerpt = $post->post_excerpt . $more;
 				} elseif( has_excerpt() ) {
-					$excerpt = wp_trim_words( strip_shortcodes( $post->post_excerpt ), $length, $more );
+					if($force_read_more) {
+            $excerpt = wp_trim_words( strip_shortcodes( $post->post_excerpt ), $length, '...' ).$more;
+          } else {
+            $excerpt = wp_trim_words( strip_shortcodes( $post->post_excerpt ), $length, '...'.$more );
+          }
 				} else {
-					$excerpt = wp_trim_words( strip_shortcodes( $post->post_content ), $length, $more );
+					if($force_read_more) {
+            $excerpt = wp_trim_words( strip_shortcodes( $post->post_content ), $length, '...' ).$more;
+          } else {
+            $excerpt = wp_trim_words( strip_shortcodes( $post->post_content ), $length, '...'.$more );
+          }
 				}
 
 
@@ -497,6 +514,11 @@ function be_display_posts_shortcode( $atts ) {
 
 		$class = array( 'listing-item' );
 
+		if($atts['child_classes'] != '') {
+			$class = array_merge($class, explode($atts['child_classes']));
+		}
+
+
 		/**
 		 * Filter the post classes for the inner wrapper element of the current post.
 		 *
@@ -529,7 +551,29 @@ function be_display_posts_shortcode( $atts ) {
 		 */
 		$inner .= apply_filters( 'display_posts_shortcode_output', $output, $original_atts, $image, $title, $date, $excerpt, $inner_wrapper, $content, $class, $author, $category_display_text );
 
-	endwhile; wp_reset_postdata();
+	endwhile;
+
+
+	$poss_pagination_code = '';
+	if($pagination) {
+		if($listing->max_num_pages > 1) {
+			if(function_exists('wp_pagenavi')) {
+				$poss_pagination_code = wp_pagenavi(array( 'query' => $listing , 'echo' => false));
+			}
+			else {
+				$poss_pagination_code = '
+				<div class="pagination"><div class="wp-pagenavi">
+					<span class="pages">Seite '.$args['paged'].' von '.$listing->max_num_pages.'</span>
+					'.get_previous_posts_link(__('&larr; Vorherige', 'purepress'), $listing->max_num_pages).'
+					'.get_next_posts_link(__('Nächste &rarr;', 'purepress'), $listing->max_num_pages).'
+					</div></div>';
+				}
+		 }
+	}
+
+
+
+	wp_reset_postdata();
 
 	/**
 	 * Filter the shortcode output's opening outer wrapper element.
@@ -568,7 +612,7 @@ function be_display_posts_shortcode( $atts ) {
 		$return .= '<' . $title_tag . ' class="display-posts-title">' . $shortcode_title . '</' . $title_tag . '>' . "\n";
 	}
 
-	$return .= $open . $inner . $close;
+	$return .= $open . $inner . $close . $poss_pagination_code;
 
 	return $return;
 }
