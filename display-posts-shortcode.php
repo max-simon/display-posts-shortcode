@@ -89,7 +89,7 @@ function be_display_posts_shortcode( $atts ) {
 		'wrapper_id'           => false,
 		'pagination'					 => false,
 		'force_read_more'      => false,
-		'child_classes'	       => '',
+		'child_class'	       => '',
 	), $atts, 'display-posts' );
 
 	// End early if shortcode should be turned off
@@ -514,7 +514,7 @@ function be_display_posts_shortcode( $atts ) {
 
 		$class = array( 'listing-item' );
 
-		if($atts['child_classes'] != '') {
+		if($atts['child_class'] != '') {
 			$class = array_merge($class, array_map('sanitize_html_class', (explode( ' ', $atts['child_class']))));
 		}
 
