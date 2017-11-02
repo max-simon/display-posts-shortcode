@@ -38,4 +38,4 @@ Default: false<br/>
 Example: [display-posts include_date="true" calendar_icon="true"]
 
 
-I also add a stylesheet with some basic rules. Feel free to change anything :)
+I also add a **stylesheet** with some basic CSS rules. Feel free to change anything :)
