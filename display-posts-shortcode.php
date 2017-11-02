@@ -28,7 +28,7 @@
  * @link https://github.com/billerickson/display-posts-shortcode/wiki#customization-with-filters
  */
 
-
+wp_enqueue_style( 'display-posts-css', plugins_url( 'stylesheet.css', __FILE__ ));
 
  function dps_get_pagination($id) {
    if(isset($_GET['dps_'.$id])) {
@@ -137,6 +137,10 @@ function be_display_posts_shortcode( $atts ) {
 		'pagination'					 => -1,
 		'force_read_more'      => false,
 		'child_class'	         => '',
+    'break_after'          => 0,
+    'structure'            => 'itdazec', // image = i, title = t, date = d, author = a, z = category, e = excerpt, c = content
+    'calendar_icon'				 => false,
+    'show_image_descr'     => false
 	), $atts, 'display-posts' );
 
 	// End early if shortcode should be turned off
@@ -193,6 +197,10 @@ function be_display_posts_shortcode( $atts ) {
 	$wrapper_class        = array_map( 'sanitize_html_class', ( explode( ' ', $atts['wrapper_class'] ) ) );
 	$pagination 					= intval( $atts['pagination']);
 	$force_read_more   	  = filter_var( $atts['force_read_more'], FILTER_VALIDATE_BOOLEAN );
+  $show_image_desc   	  = filter_var( $atts['show_image_descr'], FILTER_VALIDATE_BOOLEAN );
+  $break_after          = intval($atts['break_after']);
+  $structure            = str_split($atts['structure']);
+  $show_calender_icon	  = filter_var( $atts['calendar_icon'], FILTER_VALIDATE_BOOLEAN );
 
 	if( !empty( $wrapper_class ) )
 		$wrapper_class = ' class="' . implode( ' ', $wrapper_class ) . '"';
@@ -458,16 +466,20 @@ function be_display_posts_shortcode( $atts ) {
 	}
 
 	$inner = '';
+
+  $post_counter = 0;
 	while ( $listing->have_posts() ): $listing->the_post(); global $post;
+
+    $post_counter += 1;
 
 		$image = $date = $author = $excerpt = $content = '';
 
 		if ( $include_title && $include_link ) {
 			/** This filter is documented in wp-includes/link-template.php */
-			$title = '<a class="title" href="' . apply_filters( 'the_permalink', get_permalink() ) . '">' . get_the_title() . '</a>';
+			$title = '<h2><a class="title" href="' . apply_filters( 'the_permalink', get_permalink() ) . '">' . get_the_title() . '</a></h2>';
 
 		} elseif( $include_title ) {
-			$title = '<span class="title">' . get_the_title() . '</span>';
+			$title = '<h2><span class="title">' . get_the_title() . '</span></h2>';
 
 		} else {
 			$title = '';
@@ -475,9 +487,15 @@ function be_display_posts_shortcode( $atts ) {
 
 		if ( $image_size && has_post_thumbnail() && $include_link ) {
 			$image = '<a class="image" href="' . get_permalink() . '">' . get_the_post_thumbnail( get_the_ID(), $image_size ) . '</a> ';
+      if($show_image_desc) {
+        $image .= '<p class="post-thumbnail-caption">'.get_the_post_thumbnail_caption(get_the_ID()).'</p>';
+      }
 
 		} elseif( $image_size && has_post_thumbnail() ) {
 			$image = '<span class="image">' . get_the_post_thumbnail( get_the_ID(), $image_size ) . '</span> ';
+      if($show_image_desc) {
+        $image .= '<p class="post-thumbnail-caption">'.get_the_post_thumbnail_caption(get_the_ID()).'</p>';
+      }
 
 		}
 
@@ -485,6 +503,10 @@ function be_display_posts_shortcode( $atts ) {
 			$date = ' <span class="date">' . get_the_date( $date_format ) . '</span>';
 		} elseif ( $include_date_modified ) {
 			$date = ' <span class="date">' . get_the_modified_date( $date_format ) . '</span>';
+		}
+
+    if ($show_calender_icon) {
+			$date = '<i class="mini-ico-calendar"></i>'.$date;
 		}
 
 		if( $include_author )
@@ -504,7 +526,7 @@ function be_display_posts_shortcode( $atts ) {
 
 				$length = $excerpt_length ? $excerpt_length : apply_filters( 'excerpt_length', 55 );
 				$more   = $excerpt_more ? $excerpt_more : apply_filters( 'excerpt_more', '' );
-				$more   = $excerpt_more_link ? ' <a href="' . get_permalink() . '">' . $more . '</a>' : ' ' . $more;
+				$more   = $excerpt_more_link ? ' <span class="break_for_more"></span><a href="' . get_permalink() . '">' . $more . '</a>' : ' ' . $more;
 
 				if( has_excerpt() && apply_filters( 'display_posts_shortcode_full_manual_excerpt', false ) ) {
 					$excerpt = $post->post_excerpt . $more;
@@ -528,7 +550,7 @@ function be_display_posts_shortcode( $atts ) {
 				$excerpt = get_the_excerpt();
 			}
 
-			$excerpt = ' <span class="excerpt-dash">-</span> <span class="excerpt">' . $excerpt . '</span>';
+			$excerpt = ' <p class="excerpt">' . $excerpt . '</p>';
 
 
 		}
@@ -578,7 +600,40 @@ function be_display_posts_shortcode( $atts ) {
 		 * @param array    $original_atts Original attributes passed to the shortcode.
 		 */
 		$class = array_map( 'sanitize_html_class', apply_filters( 'display_posts_shortcode_post_class', $class, $post, $listing, $original_atts ) );
-		$output = '<' . $inner_wrapper . ' class="' . implode( ' ', $class ) . '">' . $image . $title . $date . $author . $category_display_text . $excerpt . $content . '</' . $inner_wrapper . '>';
+
+    $output = '<' . $inner_wrapper . ' class="' . implode( ' ', $class ) . '">';
+    for($i = 0; $i < count($structure); $i++) {
+      switch ($structure[$i]) {
+        case 'i':
+          $output .= $image;
+          break;
+        case 't':
+          $output .= $title;
+          break;
+        case 'd':
+          $output .= $date;
+          break;
+        case 'a':
+          $output .= $author;
+          break;
+        case 'z':
+          $output .= $category_display_text;
+          break;
+        case 'e':
+          $output .= $excerpt;
+          break;
+        case 'c':
+          $output .= $content;
+        default:
+
+          break;
+      }
+    }
+    $output .= '</' . $inner_wrapper . '>';
+
+    if($break_after > 0 && $post_counter % $break_after == 0) {
+      $output .= '<div style="clear: both"></div>';
+    }
 
 		/**
 		 * Filter the HTML markup for output via the shortcode.
