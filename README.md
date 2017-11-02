@@ -1,11 +1,11 @@
 # Enhanced Display Posts Shortcode #
 This repository is a fork of the original [Display Posts Shortcode Project](https://github.com/billerickson/display-posts-shortcode "Original Package"), but implements some extra features.
-  Therefore, all parameters of the original packages are still working and can be used. This fork implements in addition:
+Therefore, all parameters of the original packages are still working and can be used. This fork implements in addition:
 
 **pagination**
-  If there are more posts than you allowed by `posts_per_page` parameter, you can turn on pagination. This is a number indicating the id of the shortcode on the page (therefore the number should be unique for each shortcode on your page). If `wp_pagenavi` is installed, it will use it.
-  Default: -1 (Off)
-  Example: [display-posts pagination="2"]
+If there are more posts than you allowed by `posts_per_page` parameter, you can turn on pagination. This is a number indicating the id of the shortcode on the page (therefore the number should be unique for each shortcode on your page). If `wp_pagenavi` is installed, it will use it.<br/>
+Default: -1 (Off)<br/>
+Example: [display-posts pagination="2"]
 
 
 **structure**
